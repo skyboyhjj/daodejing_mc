@@ -16,12 +16,14 @@ from main import (
     DAODEJING, build_full_sequence, build_transition_matrix,
     stationary_distribution, build_macro_transition,
     normalized_ei, effective_information, lumpability_error,
-    semantic_macro_labels, SEMANTIC_PARTITION, MACRO_NAMES,
+    semantic_macro_labels, get_macro_grouping, _resolve_mode,
     OUTPUT_DIR
 )
 
-def build_all():
-    print("[构建] 生成可视化数据...")
+def build_all(mode='m6'):
+    """生成可视化数据。mode ∈ {'m6','m12','web'}"""
+    partition, macro_names, M = _resolve_mode(mode)
+    print(f"[构建] 生成可视化数据... (分组模式: {mode}, M={M})")
     
     # 数据
     full_seq, chapter_seqs = build_full_sequence(DAODEJING)
@@ -29,10 +31,9 @@ def build_all():
     pi = stationary_distribution(P)
     N = P.shape[0]
     
-    # ===== M=6 粗粒化：采用手工语义分组（项目最终方案）=====
+    # ===== 粗粒化：采用指定模式的手工语义分组 =====
     # 保证 network/sankey/dashboard 数据与 coarse_grain_v2.py 结论一致
-    M = 6
-    labels = semantic_macro_labels(idx, inv_idx)
+    labels = semantic_macro_labels(idx, inv_idx, mode)
     P_macro, Phi = build_macro_transition(P, labels, idx, inv_idx)
     
     # SVD 谱空间嵌入（仅用于散点图坐标，不参与分组）
@@ -42,11 +43,11 @@ def build_all():
     embedding = Vt[:M, :].T  # N×M
     
     # macro_names（使用规范名称）
-    macro_names = list(MACRO_NAMES)
+    macro_names = list(macro_names)
     
     # macro_groups（按语义分组）
     macro_groups = {}
-    for m, block in enumerate(SEMANTIC_PARTITION):
+    for m, block in enumerate(partition):
         macro_groups[m] = [(c, float(pi[idx[c]])) for c in block]
     
     # ===== 1. 网络图数据 (D3.js / Gephi 格式) =====
@@ -177,4 +178,9 @@ def build_all():
 # 已统一从 main.py 导入，避免重复定义（见文件顶部 import）
 
 if __name__ == "__main__":
-    build_all()
+    import argparse
+    _p = argparse.ArgumentParser(description="构建可视化数据")
+    _p.add_argument('--mode', choices=['m6', 'm12', 'web'], default='m6',
+                    help="分组模式：m6(默认)/m12(细粒度)/web(网页框架)")
+    _args = _p.parse_args()
+    build_all(mode=_args.mode)

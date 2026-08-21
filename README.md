@@ -49,6 +49,29 @@ python scripts/run_all.py
 
 依次执行：主流程 → 粗粒化对比 → 数据导出 → 仪表盘数据 → 6 种可视化 → Word 报告。全部产出写入 `output/`。
 
+### 分组模式与粗粒化方法（可切换）
+
+主流程及各数据脚本均支持 `--mode`（宏观态分组模式）与 `--method`（粗粒化方法）两个参数：
+
+```bash
+# 默认：M=6 手工语义（义理类别，项目默认方案）
+python scripts/main.py
+
+# 细粒度 M=12 手工语义（备选，因果涌现更强）
+python scripts/main.py --mode m12 --method semantic
+
+# 网页主题框架（由体达用）分组
+python scripts/main.py --mode web
+
+# SVD 谱分解 + K-Means（数值探索用，分组可能含孤立单点簇）
+python scripts/main.py --mode m6 --method svd
+```
+
+- `--mode`：`m6`（默认，6 大义理块）/ `m12`（细粒度 12 子主题）/ `web`（网页 8 大板块「由体达用」层级）
+- `--method`：`semantic`（默认，手工语义，可解释性优先）/ `svd`（SVD+K-Means，数据驱动）
+- `build_outputs.py`、`export_visualization_data.py` 也支持 `--mode`，保证全链路分组一致
+- 三方案对比见 `compare_frameworks.py`（默认 M6 / 网页 M6 / 细粒度 M12）
+
 ### 分步运行
 
 ```bash

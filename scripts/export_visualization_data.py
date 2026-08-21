@@ -16,13 +16,14 @@ from main import (
     DAODEJING, build_full_sequence, build_transition_matrix,
     stationary_distribution, build_macro_transition,
     normalized_ei, effective_information, lumpability_error,
-    semantic_macro_labels, SEMANTIC_PARTITION, MACRO_NAMES,
+    semantic_macro_labels, get_macro_grouping, _resolve_mode,
     OUTPUT_DIR
 )
 
-def export_all():
-    """导出所有数据供可视化使用"""
-    print("[导出] 加载数据...")
+def export_all(mode='m6'):
+    """导出所有数据供可视化使用。mode ∈ {'m6','m12','web'}"""
+    partition, macro_names, M = _resolve_mode(mode)
+    print(f"[导出] 加载数据... (分组模式: {mode}, M={M})")
     
     # 构建序列
     full_seq, chapter_seqs = build_full_sequence(DAODEJING)
@@ -31,15 +32,14 @@ def export_all():
     P, C, idx, inv_idx = build_transition_matrix(full_seq, k=1)
     pi = stationary_distribution(P)
     
-    # ===== 粗粒化：采用手工语义分组（M=6，项目最终方案）=====
+    # ===== 粗粒化：采用指定模式的手工语义分组 =====
     # 注意：不用 SVD+K-Means，保证导出数据与 coarse_grain_v2.py 的最终结论一致
-    labels = semantic_macro_labels(idx, inv_idx)
+    labels = semantic_macro_labels(idx, inv_idx, mode)
     P_macro, Phi = build_macro_transition(P, labels, idx, inv_idx)
     pi_macro = stationary_distribution(P_macro)
     
     N = P.shape[0]
-    M = 6
-    macro_names = list(MACRO_NAMES)
+    macro_names = list(macro_names)
     
     # SVD 谱空间嵌入仅用于散点图坐标（不参与分组）
     F = np.diag(pi) @ P
@@ -169,4 +169,9 @@ def export_all():
     return partition_data
 
 if __name__ == "__main__":
-    export_all()
+    import argparse
+    _p = argparse.ArgumentParser(description="导出可视化数据")
+    _p.add_argument('--mode', choices=['m6', 'm12', 'web'], default='m6',
+                    help="分组模式：m6(默认)/m12(细粒度)/web(网页框架)")
+    _args = _p.parse_args()
+    export_all(mode=_args.mode)

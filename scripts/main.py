@@ -244,13 +244,71 @@ SEMANTIC_PARTITION_WEB = [
 MACRO_NAMES_WEB = ["道体论", "辩证法", "修身内化", "无为论", "治国论", "三宝"]
 
 
-def semantic_macro_labels(idx, inv_idx):
+# ============================================================
+# 细粒度分组 M=12：在 M=6 义理类别基础上进一步细分，
+# 获得 12 个更细的子主题（贴合 Ward K=12 的自然聚类 + 语义命名）。
+# 实测（tests 实验）：
+#   宏观 EI 0.0119→0.0231（+94%），因果涌现 -0.0396→-0.0284（更强）
+#   成块性 ε 0.004621→0.005444（略升，可接受）
+# 保留 M=6 为默认以保护既有结论；M=12 为可切换的细粒度备选。
+# ============================================================
+SEMANTIC_PARTITION_M12 = [
+    ["道", "德", "天地"],            # 0 道本天地（道·德·天地同源）
+    ["玄", "象"],                    # 1 玄象妙境
+    ["自然", "朴"],                  # 2 自然返朴
+    ["无", "有"],                    # 3 有无相生
+    ["无为", "不言"],                # 4 无为不言
+    ["守", "去"],                    # 5 守中去奢
+    ["柔弱", "水"],                  # 6 柔水之道
+    ["反", "一"],                    # 7 反复归一
+    ["辩证", "刚强"],                # 8 刚柔辩证
+    ["圣人", "侯王", "治"],          # 9 圣王之治
+    ["兵", "小国寡民"],              # 10 用兵与国
+    ["民", "欲", "知足", "知", "信", "名", "三宝"],  # 11 民德知欲
+]
+MACRO_NAMES_M12 = ["道本天地", "玄象妙境", "自然返朴", "有无相生", "无为不言",
+                   "守中去奢", "柔水之道", "反复归一", "刚柔辩证", "圣王之治",
+                   "用兵与国", "民德知欲"]
+
+
+# ============================================================
+# 统一分组选择：按模式返回 (partition, macro_names, M)
+# 支持：'m6'（默认）/ 'm12'（细粒度）/ 'web'（网页框架）
+# 供 main / build_outputs / export_visualization_data 等脚本统一使用，
+# 保证全链路分组一致。
+# ============================================================
+def get_macro_grouping(mode='m6'):
+    """返回 (partition, macro_names)，mode ∈ {'m6','m12','web'}"""
+    mode = mode.lower()
+    if mode == 'm12':
+        return SEMANTIC_PARTITION_M12, MACRO_NAMES_M12
+    if mode == 'web':
+        return SEMANTIC_PARTITION_WEB, MACRO_NAMES_WEB
+    # 默认 m6
+    return SEMANTIC_PARTITION, MACRO_NAMES
+
+
+# 各模式对应的宏观态数（SVD 粗粒化用）
+_MODE_M = {'m6': 6, 'm12': 12, 'web': 6}
+
+
+def _resolve_mode(mode='m6'):
+    """解析分组模式，返回 (partition, macro_names, M)。
+    mode ∈ {'m6','m12','web'}。"""
+    partition, names = get_macro_grouping(mode)
+    M = _MODE_M.get(mode.lower(), 6)
+    return partition, names, M
+
+
+def semantic_macro_labels(idx, inv_idx, mode='m6'):
     """
-    根据手工语义分组为每个微观概念分配宏观标签（N 维向量）。
+    根据指定模式的手工语义分组为每个微观概念分配宏观标签（N 维向量）。
     供 build_outputs / export_visualization_data 等脚本复用。
+    mode ∈ {'m6','m12','web'}
     【重构 T12】实现抽到 core.pipeline.semantic_macro_labels（按参数传入分组）。
     """
-    return _semantic_macro_labels_impl(idx, inv_idx, SEMANTIC_PARTITION)
+    partition, _ = get_macro_grouping(mode)
+    return _semantic_macro_labels_impl(idx, inv_idx, partition)
 
 
 # ============================================================
@@ -725,36 +783,69 @@ def stage_stationary(P, idx, inv_idx):
     return pi, ei_raw, ei_norm
 
 
-def stage_coarse_grain(P, pi, idx, inv_idx, M=6):
+def stage_coarse_grain(P, pi, idx, inv_idx, M=6, method='semantic', mode='m6'):
     """
-    阶段四：SVD 谱分解 + K-Means 粗粒化。
+    阶段四：宏观态粗粒化。
+
+    两种方法：
+      - method='semantic'（默认）：用手工语义分组（mode 指定 m6/m12/web），
+        可解释性优先，分组固定为对应 SEMANTIC_PARTITION_*。
+      - method='svd'：用 SVD 谱分解 + K-Means 聚类（数据驱动），
+        适合数值探索（如找最优 M），但分组可能含孤立单点簇、可解释性差。
+
     返回 dict：labels, embedding, s_vals, macro_groups, macro_names,
                P_macro, Phi, pi_macro, ei_macro_norm, explained
     """
-    _print_header("阶段四 SVD 谱分解 + K-Means 粗粒化")
-    labels, centers, explained, s_vals, embedding = svd_coarse_grain(P, pi, num_macro_states=M)
-    print(f"  ✓ SVD 前 {M} 个成分解释方差: {explained*100:.1f}%")
-    print(f"  ✓ 奇异值: {[f'{s:.4f}' for s in s_vals[:10]]}")
-
     N = P.shape[0]
-    # 构建标签映射 + 宏观分组
-    concept_to_macro = {inv_idx[i]: labels[i] for i in range(N)}
-    macro_groups = {}
-    for i in range(N):
-        m = labels[i]
-        macro_groups.setdefault(m, []).append((inv_idx[i], pi[i]))
 
-    print(f"\n  宏观态分组 (M={M}):")
-    macro_names = []
-    for m in sorted(macro_groups.keys()):
-        items = sorted(macro_groups[m], key=lambda x: -x[1])
-        name = "+".join([c for c, _ in items[:3]])
-        macro_names.append(name)
-        print(f"    [{m}] {name}")
-        for c, p in items:
-            print(f"        {c:>4s} (π={p:.4f})")
+    if method == 'svd':
+        _print_header(f"阶段四 SVD 谱分解 + K-Means 粗粒化 (M={M})")
+        labels, centers, explained, s_vals, embedding = svd_coarse_grain(
+            P, pi, num_macro_states=M)
+        print(f"  ✓ SVD 前 {M} 个成分解释方差: {explained*100:.1f}%")
+        print(f"  ✓ 奇异值: {[f'{s:.4f}' for s in s_vals[:10]]}")
 
-    # 构建宏观转移矩阵 + 宏观 EI
+        # 构建宏观分组（按聚类结果）
+        concept_to_macro = {inv_idx[i]: labels[i] for i in range(N)}
+        macro_groups = {}
+        for i in range(N):
+            m = labels[i]
+            macro_groups.setdefault(m, []).append((inv_idx[i], pi[i]))
+
+        print(f"\n  宏观态分组 (M={M}, SVD):")
+        macro_names = []
+        for m in sorted(macro_groups.keys()):
+            items = sorted(macro_groups[m], key=lambda x: -x[1])
+            name = "+".join([c for c, _ in items[:3]])
+            macro_names.append(name)
+            print(f"    [{m}] {name}")
+            for c, p in items:
+                print(f"        {c:>4s} (π={p:.4f})")
+
+    else:
+        # 手工语义分组（可解释性优先，项目最终采用）
+        _print_header(f"阶段四 手工语义粗粒化 (mode={mode}, M={M})")
+        partition, macro_names, _ = _resolve_mode(mode)
+        labels = semantic_macro_labels(idx, inv_idx, mode)
+
+        # 谱空间嵌入仅用于散点图坐标（不参与分组）
+        embedding, s_vals, explained = svd_embedding(pi, P, M)
+
+        # 构建宏观分组（按语义分组）
+        concept_to_macro = {inv_idx[i]: labels[i] for i in range(N)}
+        macro_groups = {}
+        for m, block in enumerate(partition):
+            macro_groups[m] = [(c, float(pi[idx[c]])) for c in block]
+
+        print(f"\n  宏观态分组 (mode={mode}, M={M}):")
+        for m in range(M):
+            items = macro_groups[m]
+            name = macro_names[m]
+            print(f"    [{m}] {name}")
+            for c, p in items:
+                print(f"        {c:>4s} (π={p:.4f})")
+
+    # 构建宏观转移矩阵 + 宏观 EI（两方法共用）
     P_macro, Phi = build_macro_transition(P, labels, idx, inv_idx)
     print(f"\n  ✓ 宏观转移矩阵 P_macro: {M}×{M}")
     df_macro = pd.DataFrame(P_macro, index=macro_names, columns=macro_names)
@@ -923,11 +1014,20 @@ def stage_k2_compare(full_seq, N, density, ei_raw, ei_norm):
         print(f"    建议：k=2 结果不可靠，以 k=1 为主分析")
 
 
-def main():
-    """主流程协调器：串联阶段一至七 + 保存 + 总结"""
+def main(mode='m6', method='semantic'):
+    """主流程协调器：串联阶段一至七 + 保存 + 总结。
+    mode ∈ {'m6','m12','web'}：宏观态分组模式。
+    method ∈ {'semantic','svd'}：粗粒化方法。
+      - 'semantic'（默认）：手工语义分组（可解释性优先）
+      - 'svd'：SVD+K-Means（数值探索，分组可能含孤立单点簇）
+    """
+    # 解析分组模式 → 对应 M 值
+    _, _, default_M = _resolve_mode(mode)
+    M_target = default_M
+
     print("=" * 70)
     print("  《道德经》马尔科夫链建模 — 完整 Pipeline")
-    print("  基于文档2（王弼通行本，含第10章校订）")
+    print(f"  基于文档2（王弼通行本，含第10章校订） | 模式: {mode} (M={M_target}) | 方法: {method}")
     print("=" * 70)
 
     # ---- 阶段一：文本清洗与概念抽取 ----
@@ -940,11 +1040,12 @@ def main():
     # ---- 阶段三：平稳分布 + EI ----
     pi, ei_raw, ei_norm = stage_stationary(P, idx, inv_idx)
 
-    # ---- 阶段四：SVD 粗粒化 ----
-    cg = stage_coarse_grain(P, pi, idx, inv_idx, M=6)
+    # ---- 阶段四：宏观态粗粒化 ----
+    cg = stage_coarse_grain(P, pi, idx, inv_idx, M=M_target,
+                            method=method, mode=mode)
 
     # ---- 阶段五：成块性检验 ----
-    lump_err = stage_lumpability(P, cg['labels'], idx, inv_idx, M=6)
+    lump_err = stage_lumpability(P, cg['labels'], idx, inv_idx, M=M_target)
 
     # ---- 阶段六：6 种可视化 + 找最优 M ----
     best_M = run_visualizations(
@@ -953,7 +1054,7 @@ def main():
         cg['concept_to_macro'], full_seq,
     )
     if best_M is None:
-        best_M = 6  # 可视化失败时用默认 M=6
+        best_M = M_target  # 可视化失败时用目标 M
 
     # ---- 保存核心数据 ----
     print("\n" + "=" * 60)
@@ -961,7 +1062,7 @@ def main():
     print("=" * 60)
     save_core_outputs(
         full_seq, chapter_seqs, P, pi, cg['P_macro'], cg['Phi'],
-        cg['macro_names'], cg['macro_groups'], M=6,
+        cg['macro_names'], cg['macro_groups'], M=M_target,
         ei_norm=ei_norm, ei_macro_norm=cg['ei_macro_norm'], lump_err=lump_err,
     )
 
@@ -978,7 +1079,7 @@ def main():
     print(f"    • 概念观测总数 T = {len(full_seq)}")
     print(f"    • 微观归一化 EI = {ei_norm:.4f}")
     print(f"    • 最优宏观状态数 M* = {best_M}")
-    print(f"    • 宏观归一化 EI (M=6) = {cg['ei_macro_norm']:.4f}")
+    print(f"    • 宏观归一化 EI (M={M_target}) = {cg['ei_macro_norm']:.4f}")
     print(f"    • 因果涌现强度 = {cg['ei_macro_norm'] - ei_norm:+.4f}")
     print(f"    • 成块性误差 ε = {lump_err:.6f}")
     print(f"\n  产出文件:")
@@ -989,4 +1090,12 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # 命令行参数：--mode m6|m12|web, --method semantic|svd
+    import argparse
+    _parser = argparse.ArgumentParser(description="《道德经》马尔科夫链建模主流程")
+    _parser.add_argument('--mode', choices=['m6', 'm12', 'web'], default='m6',
+                         help="宏观态分组模式：m6(默认)/m12(细粒度)/web(网页框架)")
+    _parser.add_argument('--method', choices=['semantic', 'svd'], default='semantic',
+                         help="粗粒化方法：semantic(手工语义,默认)/svd(SVD+K-Means 数值探索)")
+    _args = _parser.parse_args()
+    main(mode=_args.mode, method=_args.method)
