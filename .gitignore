@@ -1,0 +1,37 @@
+# Python 编译缓存
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 测试缓存
+.pytest_cache/
+.coverage
+htmlcov/
+.pytest_cache
+
+# 虚拟环境
+venv/
+.venv/
+env/
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# WPS/Word 临时锁文件
+~$*.docx
+*.docx.tmp
+
+# 项目输出（可通过运行脚本重新生成，体积大）
+# 如需保留可视化成果，可选择性保留 output/*.png
+output/
+
+# Word 综合报告（由 generate_report.py 生成，可重新运行）
+*.docx
+
+# 日志
+*.log
