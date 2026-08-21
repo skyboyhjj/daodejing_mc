@@ -37,7 +37,7 @@ pip install hmmlearn plotly kaleido  # 可选：HMM 分析 / 交互式桑基图
 pip install pytest            # 可选：运行单元测试
 ```
 
-> **Windows 中文字体**：脚本自动检测 `Microsoft YaHei` / `SimHei`（Windows）、`Noto Sans CJK JP`（Linux），无需手动配置。
+> **Windows 中文字体**：脚本自动检测 `Microsoft YaHei` / `SimHei`（Windows）、`Noto Sans CJK SC` / `Noto Sans CJK JP`（Linux，简体优先），无需手动配置。
 
 ## 快速开始
 

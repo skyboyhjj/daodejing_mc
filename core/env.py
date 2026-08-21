@@ -39,12 +39,12 @@ def setup_utf8_stdio():
 # ============================================================
 # 2. 中文字体自动检测
 # ============================================================
-# 跨平台中文字体优先级：Windows 优先微软雅黑/黑体，Linux 用 Noto CJK
+# 跨平台中文字体优先级：Windows 优先微软雅黑/黑体，Linux 用 Noto CJK（简体优先）
 CN_FONT_CANDIDATES = [
     'Microsoft YaHei',      # Windows 微软雅黑
     'SimHei',               # Windows 黑体
+    'Noto Sans CJK SC',     # 优先简体中文（项目为简体文本）
     'Noto Sans CJK JP',     # Linux Debian/Ubuntu 常装
-    'Noto Sans CJK SC',
     'WenQuanYi Micro Hei',  # Linux 文泉驿微米黑
     'WenQuanYi Zen Hei',
     'Arial Unicode MS',     # macOS

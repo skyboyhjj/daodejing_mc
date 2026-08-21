@@ -3,9 +3,9 @@
 ## 1. 字体问题
 **现象**：matplotlib 中文字体显示为方框
 **原因**：不同环境可用中文字体不同——Linux 沙盒仅有 `Noto Sans CJK JP`（无 SC），Windows 本机有 `Microsoft YaHei` / `SimHei`（无 Noto）
-**解决**：所有脚本已统一使用 `get_cn_font()` 自动检测函数，通过 `fontManager.ttflist` **实际扫描已注册字体**（不用 `findfont` 的 fallback，避免掩盖缺失），按优先级匹配 `Microsoft YaHei → SimHei → Noto Sans CJK JP → ...`
+**解决**：所有脚本已统一使用 `get_cn_font()` 自动检测函数，通过 `fontManager.ttflist` **实际扫描已注册字体**（不用 `findfont` 的 fallback，避免掩盖缺失），按优先级匹配 `Microsoft YaHei → SimHei → Noto Sans CJK SC → Noto Sans CJK JP → ...`（简体优先）
 **验证**：Windows 下实际选用 `Microsoft YaHei`，10 张可视化 PNG 中文均正常显示（无方框）
-**注意**：`vis_sankey_interactive.py` 的 plotly 也指定了 `Microsoft YaHei, SimHei, Noto Sans CJK JP` 字体族，跨平台兼容
+**注意**：`vis_sankey_interactive.py` 的 plotly 也指定了 `Microsoft YaHei, SimHei, Noto Sans CJK SC` 字体族，跨平台兼容
 
 ## 2. Plotly/Kaleido（已解决 ✅）
 **原现象**：沙盒环境中 kaleido 需要 Chrome，未安装，桑基图降级为 matplotlib 版

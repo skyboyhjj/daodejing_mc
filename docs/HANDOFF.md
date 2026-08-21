@@ -214,7 +214,7 @@ daodejing_mc/
 Python: 3.x
 依赖：numpy, scipy, pandas, matplotlib, seaborn, scikit-learn
 可选：networkx（网络图）, plotly + kaleido（交互式桑基图）, hmmlearn（HMM）
-字体：自动检测（Windows→Microsoft YaHei / SimHei；Linux→Noto Sans CJK JP）
+字体：自动检测（Windows→Microsoft YaHei / SimHei；Linux→Noto Sans CJK SC 优先，JP 兜底）
       通过 get_cn_font() 扫描已注册字体，跨平台兼容，避免方框
 ```
 

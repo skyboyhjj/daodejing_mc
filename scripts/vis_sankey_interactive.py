@@ -118,7 +118,7 @@ def main():
             "橙色流带 = 宏观态间转移概率 P'(>5%)<br>"
             "悬停任一流带可查看其真实概率值"
         ),
-        font=dict(family="Microsoft YaHei, SimHei, Noto Sans CJK JP", size=12),
+        font=dict(family="Microsoft YaHei, SimHei, Noto Sans CJK SC", size=12),
         width=1200, height=900,
     )
 
