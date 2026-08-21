@@ -29,7 +29,8 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # 项目根目录（core/）
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # scripts 目录（main.py）
 from main import (
     DAODEJING, build_full_sequence, build_transition_matrix,
     stationary_distribution, semantic_macro_labels, SEMANTIC_PARTITION,

@@ -6,6 +6,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.sparse import csr_matrix
+import os
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 项目根目录
+OUTPUT_DIR = os.path.join(BASE_DIR, 'output')
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 def diagnose(P, states, k, label):
     N = P.shape[0]
@@ -41,19 +46,20 @@ def diagnose(P, states, k, label):
     return density
 
 # 加载之前保存的矩阵
-P1 = np.load("output/P_k1.npy")
-P2 = np.load("output/P_k2.npy")
+P1 = np.load(os.path.join(OUTPUT_DIR, "P_k1.npy"))
+P2 = np.load(os.path.join(OUTPUT_DIR, "P_k2.npy"))
 
 # 重建 states 列表（简化版）
 import json
 from collections import Counter
 
-RAW_TEXT = open("daodejing_sample.txt").read() if False else None
+RAW_TEXT = open(os.path.join(BASE_DIR, "daodejing_sample.txt")).read() if False else None
 
 # 直接用 main.py 里的逻辑重建
 import re
-import sys
-sys.path.insert(0, ".")
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # 项目根目录（core/）
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # scripts 目录（main.py）
 from main import clean_text, extract_concepts, CONCEPT_DICT, REVERSE_MAP
 
 # 用内置文本
@@ -107,7 +113,7 @@ for ax, P, label in [(axes[0], P1, "k=1 (17×17)"), (axes[1], P2, "k=2 (39×39)"
     ax.legend()
 
 plt.tight_layout()
-plt.savefig("output/sparsity_diagnosis.png", dpi=150)
+plt.savefig(os.path.join(OUTPUT_DIR, "sparsity_diagnosis.png"), dpi=150)
 plt.close()
 print("\n  ✓ 已保存 output/sparsity_diagnosis.png")
 

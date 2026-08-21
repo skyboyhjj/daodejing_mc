@@ -2,18 +2,22 @@
 生成最终整合图：k=1 vs k=2 多维度对比面板
 """
 
+import os, sys
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 项目根目录
+OUTPUT_DIR = os.path.join(BASE_DIR, 'output')
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+sys.path.insert(0, BASE_DIR)  # 项目根目录（core/）
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # scripts 目录（main.py）
 from main import clean_text, extract_concepts, build_transition_matrix
 from diagnose_v2 import C1, C2  # 复用计数矩阵
 
 # 重新计算关键数据
-import sys
-sys.path.insert(0, ".")
 from main import stationary_distribution, effective_information, normalized_ei
 
-RAW = open("daodejing_sample.txt").read()
+RAW = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "daodejing_sample.txt")).read()
 cleaned = clean_text(RAW)
 seq = extract_concepts(cleaned)
 
@@ -117,12 +121,11 @@ ax6.text(0.05, 0.95, summary_text, transform=ax6.transAxes,
          fontsize=11, verticalalignment="top", fontfamily="monospace",
          bbox=dict(boxstyle="round,pad=0.5", facecolor="#FFF9C4", alpha=0.8))
 
-plt.savefig("output/final_comparison_panel.png", dpi=150, bbox_inches="tight")
+plt.savefig(os.path.join(OUTPUT_DIR, "final_comparison_panel.png"), dpi=150, bbox_inches="tight")
 plt.close()
 print("✓ 已保存 output/final_comparison_panel.png")
 print("\n所有产出文件：")
-import os
-for f in sorted(os.listdir("output")):
-    fp = os.path.join("output", f)
+for f in sorted(os.listdir(OUTPUT_DIR)):
+    fp = os.path.join(OUTPUT_DIR, f)
     size = os.path.getsize(fp) / 1024
     print(f"  {f:35s} ({size:.1f} KB)")

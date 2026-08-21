@@ -6,12 +6,16 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-import sys, re
-sys.path.insert(0, ".")
+import os, sys, re
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 项目根目录
+OUTPUT_DIR = os.path.join(BASE_DIR, 'output')
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+sys.path.insert(0, BASE_DIR)  # 项目根目录（core/）
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # scripts 目录（main.py）
 from main import clean_text, extract_concepts, build_transition_matrix
 
 # 重建概念序列
-RAW = open("daodejing_sample.txt").read()
+RAW = open(os.path.join(BASE_DIR, "daodejing_sample.txt")).read()
 cleaned = clean_text(RAW)
 seq = extract_concepts(cleaned)
 print(f"概念序列长度: {len(seq)}")
@@ -96,7 +100,7 @@ for ax, C, label in [(axes[0], C1, "k=1 原始计数 C"),
     plt.colorbar(im, ax=ax, label="共现次数")
 
 plt.tight_layout()
-plt.savefig("output/count_matrix_comparison.png", dpi=150)
+plt.savefig(os.path.join(OUTPUT_DIR, "count_matrix_comparison.png"), dpi=150)
 plt.close()
 print("\n  ✓ 已保存 output/count_matrix_comparison.png")
 
@@ -129,7 +133,7 @@ ax.legend(loc="lower right")
 ax.invert_yaxis()
 
 plt.tight_layout()
-plt.savefig("output/data_adequacy.png", dpi=150)
+plt.savefig(os.path.join(OUTPUT_DIR, "data_adequacy.png"), dpi=150)
 plt.close()
 print(f"  ✓ 已保存 output/data_adequacy.png")
 

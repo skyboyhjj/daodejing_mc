@@ -27,8 +27,9 @@ if sys.stdout and hasattr(sys.stdout, 'reconfigure'):
     except Exception:
         pass
 
-# 项目根目录 = 脚本所在目录（自动检测，支持任意平台）
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# 脚本目录 = 本脚本所在目录（scripts/）；项目根目录 = scripts/ 的上一级
+SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(SCRIPTS_DIR)
 os.chdir(BASE_DIR)
 
 SCRIPTS = [
@@ -68,7 +69,7 @@ def main():
     
     results = []
     for script, desc in SCRIPTS:
-        path = os.path.join(BASE_DIR, script)
+        path = os.path.join(SCRIPTS_DIR, script)
         if not os.path.exists(path):
             print(f"\n  ⚠️ 文件不存在: {script}，跳过")
             results.append((script, 'SKIP'))
@@ -96,7 +97,7 @@ def main():
     
     # 列出根目录文档
     print(f"\n  项目文档:")
-    for doc in ['HANDOFF.md', 'DESIGN_DOC_V2.md', 'run_all.py']:
+    for doc in ['docs/HANDOFF.md', 'docs/DESIGN_DOC_V2.md', 'scripts/run_all.py']:
         fpath = os.path.join(BASE_DIR, doc)
         if os.path.exists(fpath):
             print(f"    • {doc}")

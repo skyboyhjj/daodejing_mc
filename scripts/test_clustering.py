@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """诊断聚类质量 + 测试不同 K 的 silhouette 分数"""
 import sys, os, numpy as np
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # 项目根目录（core/）
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # scripts 目录（main.py）
 from main import (
     DAODEJING, build_full_sequence, build_transition_matrix,
     stationary_distribution, OUTPUT_DIR
@@ -60,7 +61,6 @@ for m in range(K_opt):
     print(f"  [{m}] ({len(members)}个) {names}")
 
 # 保存最优标签
-OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'output')
 np.save(os.path.join(OUTPUT_DIR, 'best_labels.npy'), labels)
 with open(os.path.join(OUTPUT_DIR, 'best_config.json'), 'w') as f:
     import json

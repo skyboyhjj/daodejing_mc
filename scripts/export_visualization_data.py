@@ -10,7 +10,8 @@ import os
 import json
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # 项目根目录（core/）
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # scripts 目录（main.py）
 from main import (
     DAODEJING, build_full_sequence, build_transition_matrix,
     stationary_distribution, build_macro_transition,
@@ -18,8 +19,6 @@ from main import (
     semantic_macro_labels, SEMANTIC_PARTITION, MACRO_NAMES,
     OUTPUT_DIR
 )
-
-OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'output')
 
 def export_all():
     """导出所有数据供可视化使用"""

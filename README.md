@@ -44,7 +44,7 @@ pip install pytest            # 可选：运行单元测试
 ### 一键运行完整 Pipeline（推荐）
 
 ```bash
-python run_all.py
+python scripts/run_all.py
 ```
 
 依次执行：主流程 → 粗粒化对比 → 数据导出 → 仪表盘数据 → 6 种可视化 → Word 报告。全部产出写入 `output/`。
@@ -53,23 +53,23 @@ python run_all.py
 
 ```bash
 # 1. 主流程：清洗 → 转移矩阵 → EI → 粗粒化 → 6 种可视化
-python main.py
+python scripts/main.py
 
 # 2. 多方案粗粒化对比（手工语义 vs Ward vs K-Means）
-python coarse_grain_v2.py
+python scripts/coarse_grain_v2.py
 
 # 3. 导出可视化数据（JSON/CSV）
-python export_visualization_data.py
-python build_outputs.py
+python scripts/export_visualization_data.py
+python scripts/build_outputs.py
 
 # 4. 补充分析
-python structural_diagnostics.py   # T07/T08：可逆性 + 混合时间 + 中心性
-python hmm_analysis.py            # T06：HMM 软分配
-python vis_07_timeline.py         # T04：概念时间线
-python vis_sankey_interactive.py  # T03：plotly 交互式桑基图
+python scripts/structural_diagnostics.py   # T07/T08：可逆性 + 混合时间 + 中心性
+python scripts/hmm_analysis.py            # T06：HMM 软分配
+python scripts/vis_07_timeline.py         # T04：概念时间线
+python scripts/vis_sankey_interactive.py  # T03：plotly 交互式桑基图
 
 # 5. 生成 Word 报告
-python generate_report.py
+python scripts/generate_report.py
 ```
 
 ### 运行单元测试
@@ -115,27 +115,44 @@ python -m pytest tests/ -v
 
 ```
 daodejing_mc/
-├── main.py                     # 主流程（唯一入口）
-├── run_all.py                  # 一键运行全部 Pipeline
+├── scripts/                    # 全部脚本（分析 / 可视化 / 报告）
+│   ├── main.py                 #   主流程（清洗 → 转移矩阵 → EI → 粗粒化 → 可视化）
+│   ├── run_all.py              #   一键运行全部 Pipeline
+│   ├── coarse_grain_v2.py      #   多方案粗粒化对比（语义/Ward/KMeans）
+│   ├── export_visualization_data.py  #   导出 JSON/CSV
+│   ├── build_outputs.py        #   构建仪表盘数据
+│   ├── run_all_visualizations.py     #   6 种可视化生成
+│   ├── structural_diagnostics.py     #   T07/T08 可逆性 + 中心性
+│   ├── hmm_analysis.py         #   T06 HMM 软分配
+│   ├── vis_07_timeline.py      #   T04 概念时间线
+│   ├── vis_sankey_interactive.py     #   T03 plotly 交互式桑基图
+│   ├── generate_report.py      #   Word 综合报告
+│   └── diagnose*.py / final_summary.py / test_clustering.py  # 诊断与辅助
 ├── core/                       # 公共模块（T12 重构）
 │   ├── env.py                  #   环境配置（UTF-8/字体/路径）
 │   ├── pipeline.py             #   核心算法（转移矩阵/EI/粗粒化）
 │   └── dynamics.py             #   结构动力学（可逆性/中心性）
 ├── tests/                      # 单元测试（T13）
+│   ├── conftest.py
 │   ├── test_concept_extraction.py
 │   ├── test_transition_matrix.py
 │   └── test_ei.py
-├── output/                     # 全部产出
-├── README.md                   # 本文档
-├── HANDOFF.md                  # 交接文档
-├── DESIGN_DOC_V2.md            # 设计方案
-├── TODO.md                     # 任务清单
-└── KNOWN_ISSUES.md             # 已知问题
+├── docs/                       # 项目文档
+│   ├── HANDOFF.md              #   交接文档
+│   ├── DESIGN_DOC_V2.md        #   设计方案
+│   ├── methodology.md          #   方法论
+│   ├── TODO.md                 #   任务清单
+│   └── KNOWN_ISSUES.md         #   已知问题
+├── daodejing_sample.txt        # 示例文本（3 章）
+├── output/                     # 全部产出（运行脚本生成）
+├── requirements.txt            # 依赖清单
+├── LICENSE                     # 许可证
+└── README.md                   # 本文档
 ```
 
 ### 脚本功能一览
 
-| 脚本 | 功能 |
+| 脚本（均在 `scripts/` 下） | 功能 |
 |------|------|
 | `main.py` | 主流程：清洗 → 转移矩阵 → EI → 粗粒化 → 可视化 |
 | `coarse_grain_v2.py` | 多方案粗粒化对比（语义/Ward/KMeans） |

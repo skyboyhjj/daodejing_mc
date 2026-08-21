@@ -20,8 +20,8 @@ from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 import networkx as nx
 
-# 确保能 import core 包
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# 确保能 import core 包（core/ 位于项目根目录 = 本脚本的上一级）
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # 【重构 T12】环境配置（UTF-8 / 中文字体 / 路径）抽到 core.env
 from core.env import setup_env, CN_FONT, OUTPUT_DIR

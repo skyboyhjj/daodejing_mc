@@ -12,14 +12,14 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # 项目根目录（core/）
 
 # 【重构 T12】环境配置（UTF-8 / 中文字体 / 路径）抽到 core.env
 from core.env import setup_env, CN_FONT, OUTPUT_DIR
 setup_env()
 
 # 报告输出路径（保留在项目根目录，不放进 output/）
-REPORT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '道德经概念动力学分析报告.docx')
+REPORT_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '道德经概念动力学分析报告.docx')
 
 def load_all():
     files = {}

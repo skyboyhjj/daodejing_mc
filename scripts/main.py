@@ -17,8 +17,8 @@ import json
 import os
 import sys
 
-# 确保能 import core 包（本脚本与 core/ 同目录）
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# 确保能 import core 包（core/ 位于项目根目录 = 本脚本的上一级）
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import matplotlib
 matplotlib.use('Agg')
