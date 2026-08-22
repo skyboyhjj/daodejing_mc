@@ -884,8 +884,11 @@ def stage_lumpability(P, labels, idx, inv_idx, M):
 
 def save_core_outputs(full_seq, chapter_seqs, P, pi, P_macro, Phi,
                       macro_names, macro_groups, M, ei_norm, ei_macro_norm,
-                      lump_err):
-    """保存核心数据文件（矩阵 / CSV / 分组文本），返回 df_macro"""
+                      lump_err, mode='m6', pi_macro=None, s_vals=None):
+    """保存核心数据文件（矩阵 / CSV / 分组文本）。
+    mode: 分组模式（m6/m12/web），用于写模式专属的 coarse_graining_{mode}.json，
+          并更新当前指针 coarse_graining.json（消除数据残留）。
+    返回 df_macro"""
     np.save(os.path.join(OUTPUT_DIR, 'P_matrix.npy'), P)
     np.save(os.path.join(OUTPUT_DIR, 'pi.npy'), pi)
     np.save(os.path.join(OUTPUT_DIR, 'P_macro.npy'), P_macro)
@@ -911,6 +914,7 @@ def save_core_outputs(full_seq, chapter_seqs, P, pi, P_macro, Phi,
     # 保存分组信息
     with open(os.path.join(OUTPUT_DIR, 'macro_partition.txt'), 'w', encoding='utf-8') as f:
         f.write(f"M = {M}\n")
+        f.write(f"模式 = {mode}\n")
         f.write(f"微观 EI = {ei_norm:.4f}\n")
         f.write(f"宏观 EI = {ei_macro_norm:.4f}\n")
         f.write(f"成块性误差 = {lump_err:.6f}\n\n")
@@ -920,8 +924,45 @@ def save_core_outputs(full_seq, chapter_seqs, P, pi, P_macro, Phi,
             for c, p in items:
                 f.write(f"  {c}: π={p:.4f}\n")
 
+    # 写入 coarse_graining_{mode}.json（模式专属，互不覆盖）+ 当前指针
+    # 与 export_visualization_data.py 保持一致的 JSON 结构，保证下游可读
+    if pi_macro is None:
+        pi_macro = stationary_distribution(P_macro)
+    cg_data = {
+        'M': M,
+        'mode': mode,
+        'macro_names': macro_names,
+        'groups': {},
+    }
+    for m in range(M):
+        items = sorted(macro_groups.get(m, []), key=lambda x: -x[1])
+        cg_data['groups'][str(m)] = {
+            'name': macro_names[m],
+            'concepts': [{'name': c, 'pi': float(p)} for c, p in items],
+            'macro_pi': float(pi_macro[m]) if m < len(pi_macro) else 0.0,
+        }
+    cg_data['metrics'] = {
+        'micro_EI': float(effective_information(P, pi)),
+        'micro_norm_EI': float(ei_norm),
+        'macro_EI': float(effective_information(P_macro, pi_macro)),
+        'macro_norm_EI': float(ei_macro_norm),
+        'explained_variance': float(
+            (np.asarray(s_vals[:M]) ** 2).sum() / (np.asarray(s_vals) ** 2).sum()
+            if s_vals is not None and len(s_vals) > 0 else 0.0),
+        'singular_values': [float(s) for s in (s_vals[:10] if s_vals is not None else [])],
+    }
+    # 模式专属文件（保留各模式历史，避免相互覆盖）
+    cg_suffix = os.path.join(OUTPUT_DIR, f'coarse_graining_{mode}.json')
+    with open(cg_suffix, 'w', encoding='utf-8') as f:
+        json.dump(cg_data, f, ensure_ascii=False, indent=2)
+    # 当前指针（main.py 也更新，消除"单独运行 main 后残留其他模式"的问题）
+    cg_main = os.path.join(OUTPUT_DIR, 'coarse_graining.json')
+    with open(cg_main, 'w', encoding='utf-8') as f:
+        json.dump(cg_data, f, ensure_ascii=False, indent=2)
+
     print(f"  ✓ P_matrix.npy / pi.npy / P_macro.npy / Phi.npy")
     print(f"  ✓ concept_sequence.csv / P_macro.csv / macro_partition.txt")
+    print(f"  ✓ coarse_graining_{mode}.json + coarse_graining.json")
     return df_macro
 
 
@@ -1064,6 +1105,7 @@ def main(mode='m6', method='semantic'):
         full_seq, chapter_seqs, P, pi, cg['P_macro'], cg['Phi'],
         cg['macro_names'], cg['macro_groups'], M=M_target,
         ei_norm=ei_norm, ei_macro_norm=cg['ei_macro_norm'], lump_err=lump_err,
+        mode=mode, pi_macro=cg['pi_macro'], s_vals=cg['s_vals'],
     )
 
     # ---- 阶段七：k=2 对照 ----

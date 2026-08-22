@@ -18,15 +18,16 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # scripts 目录
 from main import (
     DAODEJING, build_full_sequence, build_transition_matrix,
     stationary_distribution, build_macro_transition,
-    semantic_macro_labels, SEMANTIC_PARTITION, MACRO_NAMES, OUTPUT_DIR
+    semantic_macro_labels, get_macro_grouping, _resolve_mode, OUTPUT_DIR
 )
 
 # 【重构 T12】UTF-8 输出已由 main.py → core.env 统一配置，此处无需重复。
 
 
-def main():
+def main(mode='m6'):
+    partition, macro_names, M = _resolve_mode(mode)
     print("=" * 60)
-    print("  T03: 桑基图升级 - plotly 交互式 HTML")
+    print(f"  T03: 桑基图升级 - plotly 交互式 HTML (模式: {mode}, M={M})")
     print("=" * 60)
 
     try:
@@ -40,14 +41,13 @@ def main():
     P, C, idx, inv_idx = build_transition_matrix(full_seq, k=1)
     pi = stationary_distribution(P)
     N = P.shape[0]
-    M = 6
 
-    labels = semantic_macro_labels(idx, inv_idx)
+    labels = semantic_macro_labels(idx, inv_idx, mode)
     P_macro, Phi = build_macro_transition(P, labels, idx, inv_idx)
 
     # ---- 节点 ----
     micro_labels = [inv_idx[i] for i in range(N)]
-    node_labels = micro_labels + list(MACRO_NAMES)
+    node_labels = micro_labels + list(macro_names)
     node_colors = ['#5B9BD5'] * N + ['#ED7D31'] * M
 
     # ---- 微观→宏观 流（value 用真实平稳概率 π，hover 显示真实含义）----
@@ -58,11 +58,11 @@ def main():
         sources_micro.append(i)
         targets_micro.append(N + j)
         values_micro.append(float(pi[i]))  # 真实 π，便于 hover 展示
-        customdata_micro.append([micro_labels[i], MACRO_NAMES[j], round(float(pi[i]), 4)])
+        customdata_micro.append([micro_labels[i], macro_names[j], round(float(pi[i]), 4)])
         hovertext_micro.append(
-            f"<b>{micro_labels[i]}</b> → <b>{MACRO_NAMES[j]}</b><br>"
+            f"<b>{micro_labels[i]}</b> → <b>{macro_names[j]}</b><br>"
             f"平稳概率 π = {pi[i]:.4f}<br>"
-            f"(第 {int(labels[i])} 宏观态 · 手工语义分组)"
+            f"(第 {int(labels[i])} 宏观态 · 分组模式 {mode})"
         )
 
     # ---- 宏观→宏观 流（value 用真实转移概率 P_macro，阈值 5%）----
@@ -74,9 +74,9 @@ def main():
                 sources_macro.append(N + i)
                 targets_macro.append(N + j)
                 values_macro.append(float(P_macro[i, j]))  # 真实转移概率
-                customdata_macro.append([MACRO_NAMES[i], MACRO_NAMES[j], round(float(P_macro[i, j]), 4)])
+                customdata_macro.append([macro_names[i], macro_names[j], round(float(P_macro[i, j]), 4)])
                 hovertext_macro.append(
-                    f"<b>{MACRO_NAMES[i]}</b> → <b>{MACRO_NAMES[j]}</b><br>"
+                    f"<b>{macro_names[i]}</b> → <b>{macro_names[j]}</b><br>"
                     f"转移概率 P'(>5%) = {P_macro[i, j]:.4f}"
                 )
 
@@ -113,12 +113,13 @@ def main():
         title_text=(
             "<b>《道德经》概念粗粒化桑基图（交互式）</b><br>"
             "左侧蓝柱 = 31 个微观概念（按平稳概率 π 加权）<br>"
-            "中间流带 = 概念→宏观义理（手工语义分组 M=6）<br>"
-            "右侧橙柱 = 6 个宏观义理（按平稳概率 π' 排序）<br>"
+            f"中间流带 = 概念→宏观义理（分组模式 {mode}, M={M}）<br>"
+            f"右侧橙柱 = {M} 个宏观义理（按平稳概率 π' 排序）<br>"
             "橙色流带 = 宏观态间转移概率 P'(>5%)<br>"
             "悬停任一流带可查看其真实概率值"
         ),
-        font=dict(family="Microsoft YaHei, SimHei, Noto Sans CJK SC", size=12),
+        # 中文字体族：Windows 微软雅黑/黑体，Linux 优先简体中文 Noto Sans CJK SC
+        font=dict(family="Microsoft YaHei, SimHei, Noto Sans CJK SC, Noto Sans CJK JP", size=12),
         width=1200, height=900,
     )
 
@@ -140,4 +141,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    _p = argparse.ArgumentParser(description="生成交互式桑基图")
+    _p.add_argument('--mode', choices=['m6', 'm12', 'web'], default='m6',
+                    help="分组模式：m6(默认)/m12(细粒度)/web(网页框架)")
+    _args = _p.parse_args()
+    main(mode=_args.mode)

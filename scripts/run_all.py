@@ -33,23 +33,27 @@ BASE_DIR = os.path.dirname(SCRIPTS_DIR)
 os.chdir(BASE_DIR)
 
 SCRIPTS = [
-    ('main.py',                      '主流程（清洗→转移矩阵→粗粒化）'),
-    ('coarse_grain_v2.py',          '多方案粗粒化对比'),
-    ('export_visualization_data.py', '导出可视化数据'),
-    ('build_outputs.py',             '构建仪表盘数据'),
-    ('run_all_visualizations.py',   '6 种可视化生成'),
-    ('generate_report.py',           'Word 综合报告'),
+    ('main.py',                      '主流程（清洗→转移矩阵→粗粒化）', True),
+    ('coarse_grain_v2.py',          '多方案粗粒化对比', False),
+    ('export_visualization_data.py', '导出可视化数据', True),
+    ('build_outputs.py',             '构建仪表盘数据', True),
+    ('run_all_visualizations.py',   '6 种可视化生成', False),
+    ('generate_report.py',           'Word 综合报告', False),
 ]
 
-def run_script(script_path, description):
+def run_script(script_path, description, mode=None, supports_mode=False):
+    mode_tag = f" [mode={mode}]" if supports_mode else ""
     print(f"\n{'='*70}")
-    print(f"  ▶ 运行: {os.path.basename(script_path)}")
+    print(f"  ▶ 运行: {os.path.basename(script_path)}{mode_tag}")
     print(f"  ▷ 说明: {description}")
     print(f"{'='*70}\n")
     
+    cmd = [sys.executable, script_path]
+    if supports_mode and mode:
+        cmd += ['--mode', mode]
     start = time.time()
     result = subprocess.run(
-        [sys.executable, script_path],
+        cmd,
         capture_output=False,
         cwd=BASE_DIR
     )
@@ -63,18 +67,24 @@ def run_script(script_path, description):
         return True
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="一键运行《道德经》马尔科夫链全部 Pipeline")
+    parser.add_argument('--mode', choices=['m6', 'm12', 'web'], default='m6',
+                        help="宏观态分组模式：m6(默认)/m12(细粒度)/web(网页框架)")
+    args = parser.parse_args()
+
     print("╔══════════════════════════════════════════════════════════╗")
-    print("║   《道德经》马尔科夫链 — 一键运行全部 Pipeline          ║")
+    print(f"║   《道德经》马尔科夫链 — 一键运行全部 Pipeline (mode={args.mode}) ║")
     print("╚══════════════════════════════════════════════════════════╝")
     
     results = []
-    for script, desc in SCRIPTS:
+    for script, desc, supports_mode in SCRIPTS:
         path = os.path.join(SCRIPTS_DIR, script)
         if not os.path.exists(path):
             print(f"\n  ⚠️ 文件不存在: {script}，跳过")
             results.append((script, 'SKIP'))
             continue
-        ok = run_script(path, desc)
+        ok = run_script(path, desc, mode=args.mode, supports_mode=supports_mode)
         results.append((script, 'OK' if ok else 'FAIL'))
     
     # 汇总

@@ -35,7 +35,7 @@ from main import (
     DAODEJING, build_full_sequence, build_transition_matrix,
     stationary_distribution, build_macro_transition,
     effective_information, normalized_ei,
-    semantic_macro_labels, SEMANTIC_PARTITION, MACRO_NAMES, OUTPUT_DIR
+    semantic_macro_labels, OUTPUT_DIR
 )
 
 # 【重构 T12】环境配置（UTF-8 / 中文字体）抽到 core.env
@@ -217,9 +217,9 @@ def plot_hmm_results(B, A, hard_labels, soft_Phi, inv_idx, ei_compare):
 # ============================================================
 # 主流程
 # ============================================================
-def main():
+def main(mode='m6'):
     print("=" * 60)
-    print("  P2 T06: HMM 软分配分析")
+    print(f"  P2 T06: HMM 软分配分析 (模式: {mode})")
     print("=" * 60)
 
     # 加载数据
@@ -227,10 +227,12 @@ def main():
     P, C, idx, inv_idx = build_transition_matrix(full_seq, k=1)
     pi = stationary_distribution(P)
     N = P.shape[0]
-    M = 6
+    # HMM 隐状态数 = 分组模式对应 M
+    from main import _resolve_mode
+    _, _, M = _resolve_mode(mode)
 
     # 硬划分标签
-    hard_labels = semantic_macro_labels(idx, inv_idx)
+    hard_labels = semantic_macro_labels(idx, inv_idx, mode)
     print(f"  N = {N} 概念, M = {M} 状态, T = {len(full_seq)} 观测")
 
     # 整数编码
@@ -330,4 +332,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    _p = argparse.ArgumentParser(description="HMM 软分配分析")
+    _p.add_argument('--mode', choices=['m6', 'm12', 'web'], default='m6',
+                    help="分组模式：m6(默认)/m12(细粒度)/web(网页框架)")
+    _args = _p.parse_args()
+    main(mode=_args.mode)

@@ -47,10 +47,10 @@ def export_all(mode='m6'):
     explained = (s_vals[:M] ** 2).sum() / (s_vals ** 2).sum()
     embedding = Vt[:M, :].T  # N×M
     
-    # 构建 macro_groups（按语义分组）
+    # 构建 macro_groups（按当前模式分组）
     macro_groups = {}
-    for m, block in enumerate(SEMANTIC_PARTITION):
-        macro_groups[m] = [(c, float(pi[idx[c]])) for c in block]
+    for m, block in enumerate(partition):
+        macro_groups[m] = [(c, float(pi[idx[c]])) for c in block if c in idx]
     
     # ===== 导出 1: 概念序列 JSON =====
     concept_data = {
@@ -121,9 +121,12 @@ def export_all(mode='m6'):
         'singular_values': [float(s) for s in s_vals[:10]],
     }
     
+    # 模式专属文件（保留各模式历史）+ 当前指针（消除数据残留）
+    with open(os.path.join(OUTPUT_DIR, f'coarse_graining_{mode}.json'), 'w', encoding='utf-8') as f:
+        json.dump(partition_data, f, ensure_ascii=False, indent=2)
     with open(os.path.join(OUTPUT_DIR, 'coarse_graining.json'), 'w', encoding='utf-8') as f:
         json.dump(partition_data, f, ensure_ascii=False, indent=2)
-    print("  ✓ coarse_graining.json")
+    print(f"  ✓ coarse_graining_{mode}.json + coarse_graining.json")
     
     # ===== 导出 7: 主题河流数据 CSV =====
     # 概念 → 宏观态 映射（一次性构建）

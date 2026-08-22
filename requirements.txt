@@ -21,6 +21,9 @@ python-docx>=0.8.11
 plotly>=5.0
 kaleido>=0.2
 
+# 可选：W2V 嵌入实验（P1-A MC×W2V / P1-B W2V-GMM / P2-A 反向图传播）
+gensim>=4.3
+
 # 可选：HMM 软分配（T06）
 hmmlearn>=0.3
 

@@ -44,10 +44,12 @@ pip install pytest            # 可选：运行单元测试
 ### 一键运行完整 Pipeline（推荐）
 
 ```bash
-python scripts/run_all.py
+python scripts/run_all.py                 # 默认模式 m6
+python scripts/run_all.py --mode web      # 网页主题框架全链路
+python scripts/run_all.py --mode m12      # 细粒度全链路
 ```
 
-依次执行：主流程 → 粗粒化对比 → 数据导出 → 仪表盘数据 → 6 种可视化 → Word 报告。全部产出写入 `output/`。
+依次执行：主流程 → 粗粒化对比 → 数据导出 → 仪表盘数据 → 6 种可视化 → Word 报告。全部产出写入 `output/`。支持 `--mode m6|m12|web` 一键切换整条管线的宏观态分组。
 
 ### 分组模式与粗粒化方法（可切换）
 
@@ -71,6 +73,23 @@ python scripts/main.py --mode m6 --method svd
 - `--method`：`semantic`（默认，手工语义，可解释性优先）/ `svd`（SVD+K-Means，数据驱动）
 - `build_outputs.py`、`export_visualization_data.py` 也支持 `--mode`，保证全链路分组一致
 - 三方案对比见 `compare_frameworks.py`（默认 M6 / 网页 M6 / 细粒度 M12）
+
+### Word2Vec 嵌入实验（可选）
+
+新增 3 个基于 `gensim` 的实验脚本（先在 `output/` 跑过 `export_visualization_data.py` 即可）：
+
+```bash
+# P1-A  MC×W2V：随机游走生成概念序列训练 Word2Vec，评估与 SVD 谱结构的一致性
+python scripts/experiment_mc_w2v.py
+
+# P1-B  W2V-GMM：在 W2V 嵌入上做高斯混合软聚类，计算软分配 EI 并与 HMM 对比
+python scripts/experiment_w2v_gmm.py
+
+# P2-A  W2V→MC 反向融合：图传播融合语义先验与动力学，扫描 α 看成块性误差 ε 变化
+python scripts/experiment_w2v_mc_back.py
+```
+
+产出：`w2v_experiment_results.json` / `w2v_gmm_experiment_results.json` / `w2v_mc_back_results.json`，对应可视化 `vis_10_w2v_vs_svd.png` / `vis_11_gmm_soft.png` / `vis_12_w2v_mc_back.png`。需要先安装 `gensim>=4.3`（已加入 `requirements.txt`）。
 
 ### 分步运行
 
@@ -116,7 +135,7 @@ python -m pytest tests/ -v
 | `centrality_rankings.csv` | T08 中心性排名 |
 | `hmm_results.json` / `P_hmm.npy` | HMM 软分配结果 |
 
-### 可视化（10 张 PNG + 1 交互 HTML）
+### 可视化（13 张 PNG + 1 交互 HTML）
 
 | 文件 | 内容 |
 |------|------|
@@ -126,9 +145,12 @@ python -m pytest tests/ -v
 | `vis_04_sankey.png` / `.html` | 粗粒化桑基图（plotly 交互版） |
 | `vis_05_theme_river.png` | 主题河流图（章节 × 宏观态） |
 | `vis_06_emergence.png` | 因果涌现曲线 + 奇异值谱 |
-| `vis_07_timeline.png` | 概念时间线（T04） |
+| `vis_07_timeline*.png` | 概念时间线（T04，文件名带模式后缀，如 `_web`） |
 | `vis_08_dynamics.png` | 结构诊断（T07+T08） |
 | `vis_09_hmm.png` | HMM 软分配（T06） |
+| `vis_10_w2v_vs_svd.png` | W2V vs SVD 谱一致性（P1-A） |
+| `vis_11_gmm_soft.png` | 软分配聚类对比（P1-B） |
+| `vis_12_w2v_mc_back.png` | W2V→MC 反向融合（P2-A） |
 
 ### 报告
 
@@ -140,15 +162,18 @@ python -m pytest tests/ -v
 daodejing_mc/
 ├── scripts/                    # 全部脚本（分析 / 可视化 / 报告）
 │   ├── main.py                 #   主流程（清洗 → 转移矩阵 → EI → 粗粒化 → 可视化）
-│   ├── run_all.py              #   一键运行全部 Pipeline
+│   ├── run_all.py              #   一键运行全部 Pipeline（支持 --mode）
 │   ├── coarse_grain_v2.py      #   多方案粗粒化对比（语义/Ward/KMeans）
-│   ├── export_visualization_data.py  #   导出 JSON/CSV
-│   ├── build_outputs.py        #   构建仪表盘数据
+│   ├── export_visualization_data.py  #   导出 JSON/CSV（支持 --mode）
+│   ├── build_outputs.py        #   构建仪表盘数据（支持 --mode）
 │   ├── run_all_visualizations.py     #   6 种可视化生成
 │   ├── structural_diagnostics.py     #   T07/T08 可逆性 + 中心性
-│   ├── hmm_analysis.py         #   T06 HMM 软分配
-│   ├── vis_07_timeline.py      #   T04 概念时间线
-│   ├── vis_sankey_interactive.py     #   T03 plotly 交互式桑基图
+│   ├── hmm_analysis.py         #   T06 HMM 软分配（支持 --mode）
+│   ├── vis_07_timeline.py      #   T04 概念时间线（支持 --mode）
+│   ├── vis_sankey_interactive.py     #   T03 plotly 交互式桑基图（支持 --mode）
+│   ├── experiment_mc_w2v.py    #   P1-A MC×W2V 嵌入实验
+│   ├── experiment_w2v_gmm.py   #   P1-B W2V-GMM 软聚类实验
+│   ├── experiment_w2v_mc_back.py     #   P2-A W2V→MC 反向融合实验
 │   ├── generate_report.py      #   Word 综合报告
 │   └── diagnose*.py / final_summary.py / test_clustering.py  # 诊断与辅助
 ├── core/                       # 公共模块（T12 重构）
@@ -183,7 +208,10 @@ daodejing_mc/
 | `hmm_analysis.py` | T06 HMM 软分配分析 |
 | `run_all_visualizations.py` | 6 种可视化生成 |
 | `vis_07_timeline.py` | T04 概念时间线 |
-| `vis_sankey_interactive.py` | T03 plotly 交互式桑基图 |
+| `vis_sankey_interactive.py` | T03 plotly 交互式桑基图（支持 `--mode`） |
+| `experiment_mc_w2v.py` | P1-A MC×W2V 嵌入一致性实验 |
+| `experiment_w2v_gmm.py` | P1-B W2V-GMM 软聚类 + 软分配 EI |
+| `experiment_w2v_mc_back.py` | P2-A W2V→MC 反向图传播融合 |
 | `generate_report.py` | Word 综合报告 |
 | `build_outputs.py` / `export_visualization_data.py` | 数据导出 |
 | `diagnose*.py` / `final_summary.py` / `test_clustering.py` | 诊断与辅助 |

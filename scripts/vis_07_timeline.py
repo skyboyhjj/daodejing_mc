@@ -2,7 +2,7 @@
 """
 T04: 概念时间线可视化（第 7 种可视化）
 X 轴 = 81 章，Y 轴 = 概念，散点大小 ∝ 该章出现次数
-颜色 = 所属宏观态（手工语义分组 M=6）
+颜色 = 所属宏观态（手工语义分组，可切换 m6/m12/web）
 额外绘制每个概念的"首次出现 → 末次出现"跨度线
 
 观察目标：
@@ -11,7 +11,7 @@ X 轴 = 81 章，Y 轴 = 概念，散点大小 ∝ 该章出现次数
   - 每个概念在全书中的生命跨度
 
 依赖: numpy, pandas, matplotlib
-运行: python vis_07_timeline.py
+运行: python scripts/vis_07_timeline.py [--mode m6|m12|web]
 """
 
 import os
@@ -27,8 +27,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # scripts 目录（main.py）
 from main import (
     DAODEJING, build_full_sequence, build_transition_matrix,
-    stationary_distribution, semantic_macro_labels, SEMANTIC_PARTITION,
-    MACRO_NAMES, OUTPUT_DIR
+    stationary_distribution, semantic_macro_labels, get_macro_grouping,
+    _resolve_mode, OUTPUT_DIR
 )
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -36,14 +36,14 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # ============================================================
 # 数据准备
 # ============================================================
-def load_data():
-    """加载概念序列与宏观分组"""
+def load_data(mode='m6'):
+    """加载概念序列与宏观分组。mode ∈ {'m6','m12','web'}"""
     full_seq, chapter_seqs = build_full_sequence(DAODEJING)
     P, C, idx, inv_idx = build_transition_matrix(full_seq, k=1)
     pi = stationary_distribution(P)
 
     # 每个概念 → 宏观态
-    labels = semantic_macro_labels(idx, inv_idx)
+    labels = semantic_macro_labels(idx, inv_idx, mode)
     concept_to_macro = {inv_idx[i]: int(labels[i]) for i in range(len(inv_idx))}
 
     # 每个概念 → 出现章节及次数
@@ -68,16 +68,16 @@ def first_last_span(concept_chapters):
 # ============================================================
 # 绘图
 # ============================================================
-def plot_timeline(concept_to_macro, concept_chapters):
-    """概念时间线散点图"""
-    print("  [1/2] 绘制概念时间线...")
+def plot_timeline(concept_to_macro, concept_chapters, macro_names, mode='m6'):
+    """概念时间线散点图。mode: 分组模式，用于标题标注与文件名区分"""
+    print(f"  [1/2] 绘制概念时间线 (mode={mode})...")
     concepts = sorted(concept_chapters.keys(),
                       key=lambda c: (concept_to_macro[c], first_last_span(concept_chapters)[c][0]))
     spans = first_last_span(concept_chapters)
 
     # 宏观态颜色
-    macro_colors = plt.cm.Set2(np.linspace(0, 1, len(MACRO_NAMES)))
-    color_by_macro = {m: macro_colors[m] for m in range(len(MACRO_NAMES))}
+    macro_colors = plt.cm.Set2(np.linspace(0, 1, len(macro_names)))
+    color_by_macro = {m: macro_colors[m] for m in range(len(macro_names))}
 
     fig, ax = plt.subplots(figsize=(20, 12))
 
@@ -101,7 +101,7 @@ def plot_timeline(concept_to_macro, concept_chapters):
         macro_ranges[m][1] = y
     for m, (y0, y1) in macro_ranges.items():
         mid = (y0 + y1) / 2
-        ax.text(82.5, mid, MACRO_NAMES[m], va='center', fontsize=11,
+        ax.text(82.5, mid, macro_names[m], va='center', fontsize=11,
                 fontweight='bold', color=color_by_macro[m])
 
     ax.set_xlim(0, 88)
@@ -113,17 +113,19 @@ def plot_timeline(concept_to_macro, concept_chapters):
                        rotation=45, ha='right', fontsize=9)
     ax.set_xlabel('章节（第 1-81 章）', fontsize=13)
     ax.set_ylabel('概念', fontsize=13)
-    ax.set_title('《道德经》概念时间线\n点大小 ∝ 该章出现次数 | 颜色 = 宏观义理 | 线 = 概念生命跨度',
+    ax.set_title(f'《道德经》概念时间线（分组模式: {mode}）\n'
+                 f'点大小 ∝ 该章出现次数 | 颜色 = 宏观义理 | 线 = 概念生命跨度',
                  fontsize=15, fontweight='bold')
     ax.grid(axis='x', alpha=0.2, ls='--')
 
     # 图例（宏观态）
-    legend_handles = [Patch(facecolor=color_by_macro[m], alpha=0.8, label=MACRO_NAMES[m])
-                      for m in range(len(MACRO_NAMES))]
+    legend_handles = [Patch(facecolor=color_by_macro[m], alpha=0.8, label=macro_names[m])
+                      for m in range(len(macro_names))]
     ax.legend(handles=legend_handles, loc='upper right', fontsize=11, ncol=2, framealpha=0.95)
 
     plt.tight_layout()
-    path = os.path.join(OUTPUT_DIR, 'vis_07_timeline.png')
+    # 文件名带模式后缀，避免 m6/web/m12 的图相互覆盖
+    path = os.path.join(OUTPUT_DIR, f'vis_07_timeline_{mode}.png')
     plt.savefig(path, dpi=150, bbox_inches='tight')
     plt.close()
     print(f"    ✓ {os.path.basename(path)}")
@@ -133,11 +135,11 @@ def plot_timeline(concept_to_macro, concept_chapters):
 # ============================================================
 # 量化分析
 # ============================================================
-def macro_span_stats(concept_to_macro, concept_chapters):
+def macro_span_stats(concept_to_macro, concept_chapters, macro_names):
     """统计每个宏观态概念的首次出现章节分布"""
     spans = first_last_span(concept_chapters)
     stats = {}
-    for m, name in enumerate(MACRO_NAMES):
+    for m, name in enumerate(macro_names):
         members = [c for c, mm in concept_to_macro.items() if mm == m]
         firsts = [spans[c][0] for c in members]
         lasts = [spans[c][1] for c in members]
@@ -169,30 +171,31 @@ def print_stats(stats):
 # ============================================================
 # 主流程
 # ============================================================
-def main():
+def main(mode='m6'):
+    partition, macro_names, M = _resolve_mode(mode)
     print("=" * 60)
-    print("  T04: 概念时间线可视化")
+    print(f"  T04: 概念时间线可视化 (模式: {mode}, M={M})")
     print("=" * 60)
 
-    full_seq, chapter_seqs, pi, concept_to_macro, concept_chapters = load_data()
+    full_seq, chapter_seqs, pi, concept_to_macro, concept_chapters = load_data(mode)
     print(f"  N = {len(concept_chapters)} 个概念, 81 章")
 
-    path = plot_timeline(concept_to_macro, concept_chapters)
+    path = plot_timeline(concept_to_macro, concept_chapters, macro_names, mode)
 
-    stats, spans = macro_span_stats(concept_to_macro, concept_chapters)
+    stats, spans = macro_span_stats(concept_to_macro, concept_chapters, macro_names)
     print_stats(stats)
 
-    # 保存统计数据供其他分析使用
+    # 保存统计数据供其他分析使用（文件名带模式后缀，避免覆盖）
     df = pd.DataFrame([
         {'concept': c, 'macro_state': concept_to_macro[c],
-         'macro_name': MACRO_NAMES[concept_to_macro[c]],
+         'macro_name': macro_names[concept_to_macro[c]],
          'first_chapter': spans[c][0], 'last_chapter': spans[c][1],
          'n_chapters': spans[c][2]}
         for c in spans
     ])
-    df.to_csv(os.path.join(OUTPUT_DIR, 'concept_timeline.csv'),
-              index=False, encoding='utf-8-sig')
-    print(f"\n  ✓ concept_timeline.csv 已保存")
+    csv_path = os.path.join(OUTPUT_DIR, f'concept_timeline_{mode}.csv')
+    df.to_csv(csv_path, index=False, encoding='utf-8-sig')
+    print(f"\n  ✓ {os.path.basename(csv_path)} 已保存")
 
     print(f"\n{'='*60}")
     print(f"  ✓ 概念时间线完成: {path}")
@@ -200,4 +203,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    _p = argparse.ArgumentParser(description="生成概念时间线可视化")
+    _p.add_argument('--mode', choices=['m6', 'm12', 'web'], default='m6',
+                    help="分组模式：m6(默认)/m12(细粒度)/web(网页框架)")
+    _args = _p.parse_args()
+    main(mode=_args.mode)
